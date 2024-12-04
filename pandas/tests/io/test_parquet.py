@@ -1114,7 +1114,7 @@ class TestParquetPyArrow(Base):
         tm.assert_frame_equal(result, expected)
 
     @pytest.mark.skipif(pa_version_under11p0, reason="not supported before 11.0")
-    def test_roundtrip_decimal(self, tmp_path, pa):
+    def test_roundtrip_decimal(self, tmp_path, pa): # TODO: MAKE  roundtrip for category
         # GH#54768
         import pyarrow as pa
 
@@ -1123,6 +1123,18 @@ class TestParquetPyArrow(Base):
         df.to_parquet(path, schema=pa.schema([("a", pa.decimal128(5))]))
         result = read_parquet(path)
         expected = pd.DataFrame({"a": ["123"]}, dtype="string[python]")
+        tm.assert_frame_equal(result, expected)
+
+    def test_roundtrip_category_as_decimal(self, tmp_path, pa): # TODO: adrienpacifico MAKE  roundtrip for category
+        # GH#60491
+        import pyarrow as pa
+
+        path = tmp_path / "category_as_decimal.p"
+        df = pd.DataFrame({"a": [Decimal("123.00")]}, dtype="category")
+        expected = df.copy()
+        df.to_parquet(path)
+        result = read_parquet(path)
+        
         tm.assert_frame_equal(result, expected)
 
     def test_infer_string_large_string_type(self, tmp_path, pa):
