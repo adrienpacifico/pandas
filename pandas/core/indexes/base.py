@@ -5287,7 +5287,9 @@ class Index(IndexOpsMixin, PandasObject):
             return name in self
         return False
 
-    def append(self, other: Index | Sequence[Index]) -> Index:
+    def append(
+        self, other: Index | Sequence[Index], preserve_categoricals: bool | None = None
+    ) -> Index:
         """
         Append a collection of Index options together.
 
@@ -5329,15 +5331,22 @@ class Index(IndexOpsMixin, PandasObject):
         names = {obj.name for obj in to_concat}
         name = None if len(names) > 1 else self.name
 
-        return self._concat(to_concat, name)
+        return self._concat(
+            to_concat, name, preserve_categoricals=preserve_categoricals
+        )
 
-    def _concat(self, to_concat: list[Index], name: Hashable) -> Index:
+    def _concat(
+        self,
+        to_concat: list[Index],
+        name: Hashable,
+        preserve_categoricals: bool | None = None,
+    ) -> Index:
         """
         Concatenate multiple Index objects.
         """
         to_concat_vals = [x._values for x in to_concat]
 
-        result = concat_compat(to_concat_vals)
+        result = concat_compat(to_concat_vals, preserve_categoricals)
 
         return Index._with_infer(result, name=name)
 

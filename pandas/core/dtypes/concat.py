@@ -49,7 +49,10 @@ def _is_nonempty(x: ArrayLike, axis: AxisInt) -> bool:
 
 
 def concat_compat(
-    to_concat: Sequence[ArrayLike], axis: AxisInt = 0, ea_compat_axis: bool = False
+    to_concat: Sequence[ArrayLike],
+    axis: AxisInt = 0,
+    ea_compat_axis: bool = False,
+    preserve_categoricals: bool | None = None,
 ) -> ArrayLike:
     """
     provide concatenation of an array of arrays each of which is a single
@@ -64,6 +67,9 @@ def concat_compat(
     ea_compat_axis : bool, default False
         For ExtensionArray compat, behave as if axis == 1 when determining
         whether to drop empty arrays.
+    preserve_categoricals : bool, default None
+        Whether to preserve categorical dtype when concatenating.
+        See :func:`pandas.concat` for detailed behavior.
 
     Returns
     -------

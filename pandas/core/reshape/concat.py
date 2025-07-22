@@ -83,6 +83,7 @@ def concat(
     verify_integrity: bool = ...,
     sort: bool = ...,
     copy: bool | lib.NoDefault = ...,
+    preserve_categoricals: bool | None = ...,
 ) -> DataFrame: ...
 
 
@@ -99,6 +100,7 @@ def concat(
     verify_integrity: bool = ...,
     sort: bool = ...,
     copy: bool | lib.NoDefault = ...,
+    preserve_categoricals: bool | None = ...,
 ) -> Series: ...
 
 
@@ -115,6 +117,7 @@ def concat(
     verify_integrity: bool = ...,
     sort: bool = ...,
     copy: bool | lib.NoDefault = ...,
+    preserve_categoricals: bool | None = ...,
 ) -> DataFrame | Series: ...
 
 
@@ -131,6 +134,7 @@ def concat(
     verify_integrity: bool = ...,
     sort: bool = ...,
     copy: bool | lib.NoDefault = ...,
+    preserve_categoricals: bool | None = ...,
 ) -> DataFrame: ...
 
 
@@ -147,6 +151,7 @@ def concat(
     verify_integrity: bool = ...,
     sort: bool = ...,
     copy: bool | lib.NoDefault = ...,
+    preserve_categoricals: bool | None = ...,
 ) -> DataFrame | Series: ...
 
 
@@ -163,6 +168,7 @@ def concat(
     verify_integrity: bool = False,
     sort: bool = False,
     copy: bool | lib.NoDefault = lib.no_default,
+    preserve_categoricals: bool | None = None,
 ) -> DataFrame | Series:
     """
     Concatenate pandas objects along a particular axis.
@@ -206,6 +212,12 @@ def concat(
         non-concatenation axis is a DatetimeIndex and join='outer' and the axis is
         not already aligned. In that case, the non-concatenation axis is always
         sorted lexicographically.
+    preserve_categoricals : bool, default None
+        If True, preserve categorical dtype when concatenating categorical arrays
+        with different categories by using union_categoricals. If False,
+        categorical arrays with different categories will follow pandas' concatenation behavior (see :ref:`categorical.merge`)
+        If None (default), uses False behavior but issues a UserWarning.
+        .. versionadded:: 2.4.x
     copy : bool, default False
         If False, do not copy data unnecessarily.
 
@@ -449,6 +461,7 @@ def concat(
         verify_integrity,
         names,
         axis,
+        preserve_categoricals,
     )
 
 
@@ -515,6 +528,7 @@ def _get_result(
     verify_integrity: bool,
     names: list[HashableT] | None,
     axis: AxisInt,
+    preserve_categoricals: bool | None = None,
 ):
     cons: Callable[..., DataFrame | Series]
     sample: DataFrame | Series
@@ -522,7 +536,6 @@ def _get_result(
     # series only
     if is_series:
         sample = cast("Series", objs[0])
-
         # stack blocks
         if bm_axis == 0:
             name = com.consensus_name_attr(objs)
@@ -530,7 +543,9 @@ def _get_result(
 
             arrs = [ser._values for ser in objs]
 
-            res = concat_compat(arrs, axis=0)
+            res = concat_compat(
+                arrs, axis=0, preserve_categoricals=preserve_categoricals
+            )
 
             if ignore_index:
                 new_index: Index = default_index(len(res))
@@ -549,6 +564,7 @@ def _get_result(
 
             result = sample._constructor_from_mgr(mgr, axes=mgr.axes)
             result._name = name
+
             return result.__finalize__(
                 types.SimpleNamespace(input_objs=objs), method="concat"
             )
@@ -591,7 +607,9 @@ def _get_result(
             levels,
             verify_integrity,
             ignore_index,
+            preserve_categoricals,
         )
+
         for obj in objs:
             indexers = {}
             for ax, new_labels in enumerate(result_axes):
@@ -626,6 +644,7 @@ def new_axes(
     levels,
     verify_integrity: bool,
     ignore_index: bool,
+    preserve_categoricals,
 ) -> list[Index]:
     """Return the new [index, column] result for concat."""
     return [
@@ -637,6 +656,7 @@ def new_axes(
             names,
             levels,
             verify_integrity,
+            preserve_categoricals,
         )
         if i == bm_axis
         else get_objs_combined_axis(
@@ -644,6 +664,7 @@ def new_axes(
             axis=objs[0]._get_block_manager_axis(i),
             intersect=intersect,
             sort=sort,
+            preserve_categoricals=preserve_categoricals,
         )
         for i in range(2)
     ]
@@ -705,6 +726,7 @@ def _get_concat_axis_dataframe(
     names: list[HashableT] | None,
     levels,
     verify_integrity: bool,
+    preserve_categoricals: bool | None = None,
 ) -> Index:
     """Return result concat axis when concatenating DataFrame objects."""
     indexes_gen = (x.axes[axis] for x in objs)
@@ -717,7 +739,9 @@ def _get_concat_axis_dataframe(
     if keys is None:
         if levels is not None:
             raise ValueError("levels supported only when keys is not None")
-        concat_axis = _concat_indexes(indexes)
+        concat_axis = _concat_indexes(
+            indexes, preserve_categoricals=preserve_categoricals
+        )
     else:
         concat_axis = _make_concat_multiindex(indexes, keys, levels, names)
 
@@ -825,8 +849,8 @@ def _get_sample_object(
     return objs[0], objs
 
 
-def _concat_indexes(indexes) -> Index:
-    return indexes[0].append(indexes[1:])
+def _concat_indexes(indexes, preserve_categoricals: bool | None = None) -> Index:
+    return indexes[0].append(indexes[1:], preserve_categoricals=preserve_categoricals)
 
 
 def validate_unique_levels(levels: list[Index]) -> None:

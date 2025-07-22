@@ -521,7 +521,12 @@ class CategoricalIndex(NDArrayBackedExtensionIndex):
         mapped = self._values.map(mapper, na_action=na_action)
         return Index(mapped, name=self.name)
 
-    def _concat(self, to_concat: list[Index], name: Hashable) -> Index:
+    def _concat(
+        self,
+        to_concat: list[Index],
+        name: Hashable,
+        preserve_categoricals: bool | None = None,
+    ) -> Index:
         # if calling index is category, don't check dtype of others
         try:
             cat = Categorical._concat_same_type(
@@ -530,7 +535,10 @@ class CategoricalIndex(NDArrayBackedExtensionIndex):
         except TypeError:
             # not all to_concat elements are among our categories (or NA)
 
-            res = concat_compat([x._values for x in to_concat])
+            res = concat_compat(
+                [x._values for x in to_concat],
+                preserve_categoricals=preserve_categoricals,
+            )
             return Index(res, name=name)
         else:
             return type(self)._simple_new(cat, name=name)

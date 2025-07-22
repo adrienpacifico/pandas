@@ -65,6 +65,7 @@ def get_objs_combined_axis(
     intersect: bool = False,
     axis: Axis = 0,
     sort: bool = True,
+    preserve_categoricals: bool | None = None,
 ) -> Index:
     """
     Extract combined index: return intersection or union (depending on the
@@ -82,13 +83,20 @@ def get_objs_combined_axis(
         The axis to extract indexes from.
     sort : bool, default True
         Whether the result index should come out sorted or not.
+    preserve_categoricals : bool, default None
+        Whether to preserve categorical dtype when concatenating.
 
     Returns
     -------
     Index
     """
     obs_idxes = [obj._get_axis(axis) for obj in objs]
-    return _get_combined_index(obs_idxes, intersect=intersect, sort=sort)
+    return _get_combined_index(
+        obs_idxes,
+        intersect=intersect,
+        sort=sort,
+        preserve_categoricals=preserve_categoricals,
+    )
 
 
 def _get_distinct_objs(objs: list[Index]) -> list[Index]:
@@ -109,6 +117,7 @@ def _get_combined_index(
     indexes: list[Index],
     intersect: bool = False,
     sort: bool = False,
+    preserve_categoricals: bool | None = None,
 ) -> Index:
     """
     Return the union or intersection of indexes.
@@ -122,6 +131,8 @@ def _get_combined_index(
         calculate the union.
     sort : bool, default False
         Whether the result index should come out sorted or not.
+    preserve_categoricals : bool, default None
+        Whether to preserve categorical dtype when concatenating.
 
     Returns
     -------
